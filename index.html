@@ -1,0 +1,2142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotulaAI - Assistant Meeting & Analisis Mendalam AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf.js for exporting meeting analysis to PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        },
+                        sheets: {
+                            500: '#107c41',
+                            600: '#0b6a36',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .pulse-red {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: pulse-red-anim 1.5s infinite;
+        }
+        @keyframes pulse-red-anim {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/30">
+                    <i class="fa-solid fa-brain text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-white tracking-tight flex items-center gap-2">
+                        NotulaAI <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium"><i class="fa-solid fa-shield-halved mr-1"></i>Secure Suite</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Transkrip Real-time • AES-256 Encrypted • Google Sheets Sync</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <!-- Security Status Pill -->
+                <div class="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+                    <i class="fa-solid fa-lock text-[10px]"></i>
+                    <span>AES-256 Protected</span>
+                </div>
+
+                <!-- Lock App Button -->
+                <button onclick="lockApp()" title="Kunci Aplikasi NotulaAI" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-300 hover:text-red-400 border border-slate-700 hover:border-red-500/30 text-xs font-medium flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-lock text-amber-400"></i>
+                    <span class="hidden sm:inline">Kunci AI</span>
+                </button>
+
+                <!-- Listening Indicator Pill -->
+                <div id="statusPill" class="hidden items-center space-x-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
+                    <span class="w-2 h-2 rounded-full bg-red-500 pulse-red"></span>
+                    <span id="statusText">AI Mendengar...</span>
+                </div>
+
+                <!-- Google Sheets Status -->
+                <button onclick="switchTab('sheets')" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-sheets-500/10 border border-sheets-500/30 text-emerald-400 hover:bg-sheets-500/20 text-xs font-medium transition">
+                    <i class="fa-solid fa-file-excel text-sheets-500"></i>
+                    <span id="sheetsStatusLabel">Google Sheets: Siap Sync</span>
+                </button>
+
+                <!-- Sample Presets Dropdown -->
+                <div class="relative group">
+                    <button class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium flex items-center gap-2 transition">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                        <span>Load Contoh Rapat</span>
+                        <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                    </button>
+                    <div class="absolute right-0 mt-2 w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-xl hidden group-hover:block z-50 p-2">
+                        <p class="text-[11px] font-semibold text-slate-400 px-2 py-1 uppercase tracking-wider">Pilih Skenario Rapat</p>
+                        <button onclick="loadPreset('tech')" class="w-full text-left px-3 py-2 text-xs rounded-lg text-slate-200 hover:bg-slate-700 transition flex items-center gap-2">
+                            <i class="fa-solid fa-code text-blue-400"></i> Project Kickoff App Mobile
+                        </button>
+                        <button onclick="loadPreset('executive')" class="w-full text-left px-3 py-2 text-xs rounded-lg text-slate-200 hover:bg-slate-700 transition flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-emerald-400"></i> Evaluasi Target Kuartal Q3
+                        </button>
+                        <button onclick="loadPreset('product')" class="w-full text-left px-3 py-2 text-xs rounded-lg text-slate-200 hover:bg-slate-700 transition flex items-center gap-2">
+                            <i class="fa-solid fa-palette text-purple-400"></i> Brainstorming Fitur AI Baru
+                        </button>
+                        <button onclick="loadPreset('psht')" class="w-full text-left px-3 py-2 text-xs rounded-lg text-slate-200 hover:bg-slate-700 transition flex items-center gap-2">
+                            <i class="fa-solid fa-people-group text-amber-500"></i> Rapat PSHT Ranting Jagakarsa
+                        </button>
+                        <p class="text-[11px] font-semibold text-slate-400 px-2 py-1 uppercase tracking-wider mt-2 border-t border-slate-700/60 pt-2">Analisis YouTube</p>
+                        <button onclick="loadYouTubeSample('https://www.youtube.com/watch?v=2J38Y6l9P8c')" class="w-full text-left px-3 py-2 text-xs rounded-lg text-slate-200 hover:bg-slate-700 transition flex items-center gap-2">
+                            <i class="fa-brands fa-youtube text-red-500"></i> Demo Analisis Video YouTube
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- LEFT PANEL: Realtime Listening & Media Input (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col space-y-5">
+
+            <!-- Control Card & Mic Visualizer -->
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl relative overflow-hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-bold text-slate-100 flex items-center gap-2 text-base">
+                        <i class="fa-solid fa-headset text-brand-500"></i> Kontrol Sesi Rapat
+                    </h2>
+                    <select id="languageSelect" class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="id-ID" selected>Bahasa Indonesia</option>
+                        <option value="en-US">English (US)</option>
+                    </select>
+                </div>
+
+                <!-- Meeting Info Input -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Judul Rapat</label>
+                        <input type="text" id="meetingTitleInput" value="Rapat Strategi Produk & AI Notulen Q3" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Peserta Rapat (Pisahkan koma)</label>
+                        <input type="text" id="meetingParticipantsInput" value="Budi (PM), Siti (Lead Eng), Reza (Designer), Anda" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-brand-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Pembicara Aktif (Mic Live)</label>
+                        <input type="text" id="activeSpeakerInput" value="Anda" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-brand-500 focus:outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Mic Control Buttons & Visualizer -->
+                <div class="bg-slate-950/80 rounded-xl p-4 border border-slate-800 flex flex-col items-center space-y-3">
+                    <div class="flex items-center space-x-1 h-8" id="visualizerBars">
+                        <span class="v-bar w-1 bg-brand-500 rounded-full h-3 transition-all duration-150"></span>
+                        <span class="v-bar w-1 bg-brand-500 rounded-full h-3 transition-all duration-150"></span>
+                        <span class="v-bar w-1 bg-brand-500 rounded-full h-3 transition-all duration-150"></span>
+                        <span class="v-bar w-1 bg-brand-500 rounded-full h-3 transition-all duration-150"></span>
+                        <span class="v-bar w-1 bg-brand-500 rounded-full h-3 transition-all duration-150"></span>
+                        <span class="v-bar w-1 bg-brand-500 rounded-full h-3 transition-all duration-150"></span>
+                        <span class="v-bar w-1 bg-brand-500 rounded-full h-3 transition-all duration-150"></span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 font-medium" id="visText">Mikrofon Siap</p>
+                    <div class="grid grid-cols-2 gap-3 w-full">
+                        <button id="btnStartMic" onclick="toggleListening()" class="py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2 transition transform active:scale-95">
+                            <i id="micBtnIcon" class="fa-solid fa-microphone"></i>
+                            <span id="micBtnText">Mulai Rapat (Dengar)</span>
+                        </button>
+                        <button onclick="finishMeetingAndAnalyze()" class="py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition transform active:scale-95">
+                            <i class="fa-solid fa-brain"></i>
+                            <span>Selesai & Analisis AI</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Local Audio & Video File Card -->
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-file-audio text-purple-400 text-sm"></i> Rekaman Suara / Video Galeri
+                    </h3>
+                    <span class="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/30 text-purple-400 font-medium">Multimodal AI</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="relative flex items-center justify-center border-2 border-dashed border-slate-700 hover:border-purple-500/60 rounded-xl p-3 bg-slate-900/50 transition cursor-pointer group" onclick="document.getElementById('localMediaInput').click()">
+                        <input type="file" id="localMediaInput" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.webm,.mov" onchange="handleLocalMediaSelect(event)" class="hidden">
+                        <div class="flex items-center space-x-3 text-slate-400 group-hover:text-slate-200 transition">
+                            <i id="localMediaIcon" class="fa-solid fa-cloud-arrow-up text-xl text-purple-400"></i>
+                            <div class="text-left">
+                                <p id="localMediaFileName" class="text-xs font-medium text-slate-200 truncate max-w-[180px] sm:max-w-[240px]">Pilih file suara / video HP...</p>
+                                <p id="localMediaFileInfo" class="text-[10px] text-slate-500">Format: MP3, WAV, M4A, AAC, MP4, WEBM, dll.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="analyzeLocalMedia()" id="btnAnalyzeLocalMedia" disabled class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30 transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Proses Media dengan AI</span>
+                    </button>
+                </div>
+                <!-- Local Media Player Container -->
+                <div id="localMediaPlayerContainer" class="hidden rounded-xl overflow-hidden border border-slate-800 w-full bg-slate-950 mt-2 p-2">
+                    <video id="localVideoPlayer" controls class="w-full h-auto max-h-48 object-contain hidden"></video>
+                    <audio id="localAudioPlayer" controls class="w-full hidden"></audio>
+                </div>
+            </div>
+
+            <!-- YouTube Video AI Analysis Card -->
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-brands fa-youtube text-red-500 text-sm"></i> Rangkum Video YouTube
+                    </h3>
+                    <span class="text-[10px] px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-red-400 font-medium">YouTube AI</span>
+                </div>
+                <div class="flex gap-2">
+                    <input type="url" id="youtubeUrlInput" placeholder="Tempel link YouTube (https://www.youtube.com/watch?v=...)" class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-red-500 focus:outline-none transition">
+                    <button onclick="analyzeYouTubeVideo()" id="btnAnalyzeYoutube" class="px-3.5 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 shrink-0 shadow-lg shadow-red-600/30 transition transform active:scale-95">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Proses AI</span>
+                    </button>
+                </div>
+                <!-- YouTube Embed Player Container -->
+                <div id="youtubePlayerContainer" class="hidden rounded-xl overflow-hidden border border-slate-800 aspect-video w-full bg-slate-950 mt-2 relative">
+                    <iframe id="youtubeIframe" class="w-full h-full" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+
+            <!-- Manual Speech Entry Form -->
+            <div class="glass-panel rounded-2xl p-4 border border-slate-800 shadow-xl space-y-2">
+                <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-keyboard text-brand-400"></i> Tambah Pembicaraan Manual
+                </h3>
+                <form onsubmit="handleManualTranscriptSubmit(event)" class="flex gap-2">
+                    <input type="text" id="manualSpeakerInput" placeholder="Nama..." value="Anda" class="w-1/3 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-brand-500 focus:outline-none">
+                    <input type="text" id="manualTextInput" placeholder="Ketik kalimat pembicaraan..." class="w-2/3 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-brand-500 focus:outline-none">
+                    <button type="submit" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-brand-300 border border-slate-700 rounded-xl text-xs font-semibold shrink-0">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Live Transcript Stream Box -->
+            <div class="glass-panel rounded-2xl p-4 border border-slate-800 shadow-xl flex-grow flex flex-col h-[320px]">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <h3 class="font-bold text-slate-200 text-sm">Transkrip Live Rapat</h3>
+                    </div>
+                    <button onclick="clearTranscript()" class="text-slate-400 hover:text-red-400 text-xs px-2 py-1 rounded bg-slate-800 border border-slate-700 transition">
+                        <i class="fa-solid fa-trash-can"></i> Bersihkan
+                    </button>
+                </div>
+
+                <!-- Live Stream Container -->
+                <div id="transcriptBox" class="flex-grow bg-slate-950/60 rounded-xl p-3 overflow-y-auto custom-scrollbar border border-slate-800 space-y-2.5 text-sm">
+                    <div id="emptyTranscriptNotice" class="text-center py-10 text-slate-500">
+                        <i class="fa-solid fa-comments text-4xl mb-3 opacity-40"></i>
+                        <p class="text-xs">Klik <b>"Mulai Rapat"</b> lalu bicaralah di mikrofon,<br>atau muat audio/video/preset rapat di atas.</p>
+                    </div>
+                </div>
+
+                <!-- Interim Recognition Feedback -->
+                <div id="interimTextContainer" class="mt-2 min-h-[24px] px-3 py-1 bg-slate-900/50 rounded-lg border border-slate-800 text-xs text-brand-300 italic flex items-center gap-2 hidden">
+                    <i class="fa-solid fa-spinner animate-spin text-brand-400"></i>
+                    <span id="interimText">Mendengar pembicaraan...</span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- RIGHT PANEL: Deep Analysis, AI Summary, Google Sheets & Security Hub (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col space-y-5">
+
+            <!-- Tab Navigation Header -->
+            <div class="glass-panel rounded-2xl p-1.5 border border-slate-800 flex items-center justify-between overflow-x-auto custom-scrollbar">
+                <div class="flex space-x-1">
+                    <button id="tabBtn-analysis" onclick="switchTab('analysis')" class="tab-btn active flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white shadow transition">
+                        <i class="fa-solid fa-brain"></i> Notulen & Analysis
+                    </button>
+                    <button id="tabBtn-sheets" onclick="switchTab('sheets')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition">
+                        <i class="fa-solid fa-table text-sheets-500"></i> Google Sheets
+                    </button>
+                    <button id="tabBtn-chat" onclick="switchTab('chat')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition">
+                        <i class="fa-solid fa-comments text-indigo-400"></i> Tanya AI
+                    </button>
+                    <button id="tabBtn-raw" onclick="switchTab('raw')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition">
+                        <i class="fa-solid fa-file-lines"></i> Edit Transkrip
+                    </button>
+                    <button id="tabBtn-security" onclick="switchTab('security')" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition">
+                        <i class="fa-solid fa-shield-halved text-emerald-400"></i> Security & Log
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 1: Deep Analysis & Notulen Output -->
+            <div id="tabContent-analysis" class="glass-panel rounded-2xl p-6 border border-slate-800 shadow-xl min-h-[580px] flex flex-col justify-between">
+                <div>
+                    <div class="border-b border-slate-800 pb-4 mb-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="font-bold text-slate-100 text-base flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-brand-400"></i> Hasil Notulen & Analisis Mendalam Gemini AI
+                            </h2>
+                            <p class="text-xs text-slate-400">Diolah otomatis dari transkrip pembicaraan & file media rapat</p>
+                        </div>
+                    </div>
+
+                    <!-- Loader State -->
+                    <div id="analysisLoader" class="hidden py-24 text-center space-y-4">
+                        <div class="inline-block p-4 rounded-full bg-brand-500/10 border border-brand-500/30">
+                            <i class="fa-solid fa-brain text-4xl text-brand-400 animate-bounce"></i>
+                        </div>
+                        <h4 class="text-slate-200 font-bold text-sm">Gemini AI sedang Menganalisis Konten Rapat...</h4>
+                        <p class="text-xs text-slate-400 max-w-sm mx-auto">Mengekstrak ringkasan eksekutif, poin keputusan, action items, risiko, dan rincian per topik.</p>
+                    </div>
+
+                    <!-- Analysis Render Output -->
+                    <div id="analysisOutput" class="space-y-5">
+                        <div class="text-center py-20 text-slate-500 space-y-3">
+                            <i class="fa-solid fa-sparkles text-5xl text-brand-500/30"></i>
+                            <h4 class="text-slate-300 font-semibold text-sm">Belum Ada Analisis Rapat</h4>
+                            <p class="text-xs max-w-md mx-auto">Mulai rapat dengan mikrofon, unggah rekaman audio/video, atau klik <b>"Load Contoh Rapat"</b> untuk memulai analisis AI.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export & Action Footer -->
+                <div id="analysisFooter" class="hidden pt-4 mt-6 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+                    <button onclick="syncToGoogleSheets()" class="px-4 py-2 bg-gradient-to-r from-sheets-600 to-emerald-600 hover:from-sheets-500 hover:to-emerald-500 text-white font-semibold rounded-xl text-xs shadow-lg shadow-sheets-600/30 flex items-center gap-2 transition transform active:scale-95">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>Simpan ke Google Sheets</span>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="exportToPDF()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-file-pdf text-red-400"></i>
+                            <span>Unduh PDF</span>
+                        </button>
+                        <button onclick="exportToWord()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-file-word text-blue-400"></i>
+                            <span>Unduh MS Word</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Google Sheets Hub -->
+            <div id="tabContent-sheets" class="glass-panel rounded-2xl p-6 border border-slate-800 shadow-xl min-h-[580px] hidden space-y-6">
+                <div class="border-b border-slate-800 pb-4 flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-slate-100 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-table text-sheets-500"></i> Google Sheets Integration Hub
+                        </h2>
+                        <p class="text-xs text-slate-400">Hubungkan NotulaAI dengan spreadsheet Google secara otomatis</p>
+                    </div>
+                    <button onclick="toggleAppsScriptModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-brand-300 font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-code"></i> Setup Script Google Sheets
+                    </button>
+                </div>
+
+                <!-- Webhook URL Configuration -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
+                    <label class="block text-xs font-bold text-slate-200 uppercase tracking-wider">URL Webhook Google Apps Script</label>
+                    <div class="flex gap-2">
+                        <input type="url" id="sheetsWebhookUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="flex-grow bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-sheets-500 focus:outline-none font-mono">
+                        <button onclick="saveWebhookUrl()" class="px-4 py-2 bg-sheets-600 hover:bg-sheets-500 text-white font-semibold rounded-xl text-xs shrink-0 transition">
+                            Simpan URL
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Jika URL Webhook diisi, NotulaAI akan secara langsung mengirimkan baris notulen rapat ke Spreadsheet secara real-time.</p>
+                </div>
+
+                <!-- Preview Table of Stored Rows -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-emerald-400"></i> Pratinjau Data Baris Spreadsheet
+                        </h3>
+                        <button onclick="exportToCSV()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs transition">
+                            <i class="fa-solid fa-download mr-1"></i> Ekspor CSV / Excel
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-900 text-[10px] uppercase text-slate-400 border-b border-slate-800">
+                                <tr>
+                                    <th class="px-4 py-3">Waktu</th>
+                                    <th class="px-4 py-3">Judul Rapat</th>
+                                    <th class="px-4 py-3">Ringkasan Eksekutif</th>
+                                    <th class="px-4 py-3">Action Items</th>
+                                    <th class="px-4 py-3">Status Sync</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sheetsPreviewBody">
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-slate-500">Belum ada baris data rapat tersimpan. Klik "Simpan ke Google Sheets" pada tab analisis.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: AI Chat Assistant -->
+            <div id="tabContent-chat" class="glass-panel rounded-2xl p-6 border border-slate-800 shadow-xl min-h-[580px] hidden flex flex-col justify-between">
+                <div>
+                    <div class="border-b border-slate-800 pb-3 mb-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="font-bold text-slate-100 text-base flex items-center gap-2">
+                                <i class="fa-solid fa-comments text-indigo-400"></i> Tanya-Jawab AI Rapat (Meeting Assistant)
+                            </h2>
+                            <p class="text-xs text-slate-400">Ajukan pertanyaan spesifik mengenai isi rapat, komitmen, atau notulen yang telah dibuat.</p>
+                        </div>
+                    </div>
+
+                    <div id="chatMessagesBox" class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 h-[400px] overflow-y-auto custom-scrollbar space-y-3 text-xs">
+                        <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl max-w-[85%] text-slate-300">
+                            Halo! Saya AI Meeting Assistant. Setelah sesi rapat atau analisis media dibuat, Anda bisa menanyakan apa saja di sini.
+                        </div>
+                    </div>
+                </div>
+
+                <form onsubmit="askAIChat(event)" class="mt-4 flex gap-2">
+                    <input type="text" id="chatInput" placeholder="Contoh: Siapa penanggung jawab tugas desain? Atau apa risiko utama rapat ini?" class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none">
+                    <button type="submit" id="btnSendChat" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shrink-0 transition">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Kirim</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- TAB 4: Raw Transcript Editor -->
+            <div id="tabContent-raw" class="glass-panel rounded-2xl p-6 border border-slate-800 shadow-xl min-h-[580px] hidden space-y-4">
+                <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-slate-100 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-file-lines text-brand-400"></i> Editor Transkrip Mentah
+                        </h2>
+                        <p class="text-xs text-slate-400">Edit atau perbaiki kalimat transkrip sebelum diproses oleh AI</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="copyTranscriptToClipboard()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition">
+                            <i class="fa-solid fa-copy mr-1"></i> Salin Transkrip
+                        </button>
+                        <button onclick="syncRawToStream()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold transition">
+                            <i class="fa-solid fa-rotate mr-1"></i> Update Transkrip
+                        </button>
+                    </div>
+                </div>
+
+                <textarea id="rawTranscriptTextarea" class="w-full h-[440px] bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs font-mono text-slate-200 focus:border-brand-500 focus:outline-none custom-scrollbar leading-relaxed" placeholder="Transkrip rapat akan muncul di sini... Anda juga bisa menempelkan teks rapat manual secara langsung di sini."></textarea>
+            </div>
+
+            <!-- TAB 5: Cyber Security & Audit Log -->
+            <div id="tabContent-security" class="glass-panel rounded-2xl p-6 border border-slate-800 shadow-xl min-h-[580px] hidden space-y-6">
+                <div class="border-b border-slate-800 pb-4 flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-slate-100 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-shield-check text-emerald-400"></i> Modul Cyber Security & Proteksi Data
+                        </h2>
+                        <p class="text-xs text-slate-400">Autentikasi SHA-256, Enkripsi Memori AES-256, dan Sensor PII Sensitif</p>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono">
+                        Status: AKTIF & TERENKRIPSI
+                    </span>
+                </div>
+
+                <!-- Security Settings Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Change Master Password -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-key text-amber-400"></i> Ubah Password Akses Master
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Password default aplikasi adalah <code class="text-amber-300 bg-slate-950 px-1 py-0.5 rounded font-mono">Notula22</code>. Ganti untuk keamanan ekstra (Wajib 6-8 Karakter Kombinasi Huruf & Angka).</p>
+                        <form onsubmit="handleMasterPasswordChange(event)" class="space-y-2">
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">Password Saat Ini</label>
+                                <input type="password" id="currentPinInput" placeholder="Masukkan Password lama..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:border-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">Password Baru (6 - 8 Karakter Huruf & Angka)</label>
+                                <input type="password" id="newPinInput" placeholder="Contoh: Admin22..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:border-amber-500 focus:outline-none">
+                            </div>
+                            <button type="submit" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg text-xs transition">
+                                Update Password Master
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Security Toggles & PII Redaction -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-user-shield text-brand-400"></i> Proteksi Sensor Data Sensitif (PII)
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Secara otomatis mengaburkan Nomor NIK, Kartu Kredit, HP, dan Password sebelum dikirim ke Gemini AI / Google Sheets.</p>
+                        <div class="space-y-2 pt-2">
+                            <label class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800 cursor-pointer">
+                                <span class="text-xs text-slate-300">Sensor Otomatis NIK & No. HP</span>
+                                <input type="checkbox" id="piiRedactToggle" checked class="w-4 h-4 text-emerald-600 rounded bg-slate-900 border-slate-700 focus:ring-emerald-500">
+                            </label>
+                            <label class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800 cursor-pointer">
+                                <span class="text-xs text-slate-300">Auto-Lock saat Idle (5 Menit)</span>
+                                <input type="checkbox" id="autoLockToggle" checked class="w-4 h-4 text-emerald-600 rounded bg-slate-900 border-slate-700 focus:ring-emerald-500">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Audit Log Table -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-list-ol text-emerald-400"></i> Security Audit Log (Aktivitas Keamanan)
+                        </h3>
+                        <button onclick="clearSecurityLogs()" class="text-[11px] text-slate-400 hover:text-red-400 transition">
+                            <i class="fa-solid fa-trash-can"></i> Bersihkan Log
+                        </button>
+                    </div>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden h-44 overflow-y-auto custom-scrollbar p-3 font-mono text-[11px] space-y-1.5" id="securityAuditLogBox">
+                        <!-- Log entries dynamically appended here -->
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- MASTER LOGIN MODAL OVERLAY -->
+    <div id="loginModalOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-8 shadow-2xl space-y-6 text-center relative overflow-hidden">
+            <div class="absolute -top-12 -left-12 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
+
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-500 flex items-center justify-center mx-auto shadow-xl shadow-brand-500/20">
+                <i class="fa-solid fa-shield-halved text-white text-2xl"></i>
+            </div>
+
+            <div>
+                <h2 class="text-xl font-extrabold text-white tracking-tight">NotulaAI Secure Master Login</h2>
+                <p class="text-xs text-slate-400 mt-1">Sistem Terkunci • 6-8 Karakter Kombinasi Huruf & Angka</p>
+            </div>
+
+            <form onsubmit="handleMasterLogin(event)" class="space-y-4">
+                <div class="space-y-1 text-left">
+                    <label class="block text-xs font-medium text-slate-300">Password Master</label>
+                    <div class="relative">
+                        <input type="password" id="loginPinInput" autofocus placeholder="Masukkan Password (Default: Notula22)..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white text-center tracking-widest font-mono focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none transition">
+                        <button type="button" onclick="togglePinVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 text-xs">
+                            <i id="pinEyeIcon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="loginLockoutNotice" class="hidden p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-xs text-center font-medium">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                    <span id="lockoutTimerText">Terlalu banyak percobaan. Coba lagi dalam 60 detik.</span>
+                </div>
+
+                <button type="submit" id="btnLoginSubmit" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-brand-600 hover:from-emerald-500 hover:to-brand-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-emerald-600/30 transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-lock-open"></i>
+                    <span>Buka Akses NotulaAI</span>
+                </button>
+            </form>
+
+            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+                <span><i class="fa-solid fa-shield-cat text-emerald-400"></i> SHA-256 Authenticated</span>
+                <button type="button" onclick="resetPinToDefault()" class="text-amber-400 hover:text-amber-300 hover:underline cursor-pointer font-semibold transition">
+                    <i class="fa-solid fa-rotate-left mr-1"></i>Reset Pass (Default: Notula22)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPS SCRIPT MODAL OVERLAY -->
+    <div id="appsScriptModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[90] hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 relative">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-code text-brand-400"></i> Setup Google Apps Script Webhook
+                </h3>
+                <button onclick="toggleAppsScriptModal()" class="text-slate-400 hover:text-white text-xs">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+                Salin kode berikut ke menu <b>Extensions &gt; Apps Script</b> di Google Sheets Anda, lalu lakukan <b>Deploy &gt; New deployment &gt; Web app</b> (Akses: <i>Anyone</i>).
+            </p>
+            <textarea id="appsScriptCode" readonly class="w-full h-48 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-emerald-300 focus:outline-none custom-scrollbar">
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    
+    // Header jika sheet masih kosong
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["Tanggal & Waktu", "Judul Rapat", "Peserta", "Ringkasan Eksekutif", "Action Items", "Keputusan Utama", "Potensi Risiko"]);
+      sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#e0e7ff");
+    }
+    
+    sheet.appendRow([
+      data.timestamp || new Date(),
+      data.title || "",
+      data.participants || "",
+      data.summary || "",
+      data.action_items || "",
+      data.decisions || "",
+      data.risks || ""
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+</textarea>
+            <div class="flex justify-end gap-2">
+                <button onclick="copyAppsScriptCode()" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-copy"></i> Salin Kode Google Apps Script
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-[110] flex flex-col space-y-2"></div>
+
+    <script>
+        let recognition = null;
+        let isListening = false;
+        let isRecognitionRunning = false;
+        let transcriptEntries = []; 
+        let storedSheetsRows = [];
+        let currentAnalysisData = null;
+        let visInterval = null;
+        let selectedLocalMediaFile = null;
+
+        // CYBER SECURITY & AUTHENTICATION STATE
+        let isAppUnlocked = false;
+        let masterPasswordHash = null;
+        let failedLoginCount = 0;
+        let lockoutUntilTimestamp = 0;
+        let idleTimer = null;
+        let securityLogs = [];
+
+        // Sample Presets Data
+        const PRESETS = {
+            tech: {
+                title: "Project Kickoff App Mobile NotulaAI",
+                participants: "Budi (PM), Siti (Lead Eng), Reza (UI/UX), Anda",
+                transcript: [
+                    { speaker: "Budi (PM)", text: "Selamat pagi tim. Hari ini kita selesaikan alur integrasi AI Notulen dan Webhook Google Sheets." },
+                    { speaker: "Siti (Lead Eng)", text: "Untuk Webhook Google Sheets, backend Google Apps Script sudah siap menerima payload JSON POST." },
+                    { speaker: "Reza (UI/UX)", text: "Desain antarmuka sudah menggunakan Tailwind CSS dengan tema dark mode eksekutif." },
+                    { speaker: "Anda", text: "Pastikan fitur enkripsi AES-256 memori dan sensor PII otomatis aktif sebelum data dikirim." }
+                ]
+            },
+            executive: {
+                title: "Evaluasi Target Kuartal Q3 & Penjualan",
+                participants: "Direktur Utama, Manajer Keuangan, Head of Sales, Anda",
+                transcript: [
+                    { speaker: "Direktur Utama", text: "Target Q3 tercapai 115%, namun kita harus menghemat biaya operasional sebesar 10% untuk Q4." },
+                    { speaker: "Manajer Keuangan", text: "Laporan alokasi anggaran belanja AI dan cloud server sudah dirapikan." },
+                    { speaker: "Head of Sales", text: "Tim penjualan berhasil mengamankan 5 kontrak enterprise baru di bulan ini." }
+                ]
+            },
+            product: {
+                title: "Brainstorming Fitur AI Multimodal Baru",
+                participants: "Product Lead, AI Researcher, Marketing Lead",
+                transcript: [
+                    { speaker: "Product Lead", text: "Kita butuh kemampuan membaca video dari galeri HP dan video YouTube secara langsung." },
+                    { speaker: "AI Researcher", text: "Model Gemini 3 Flash sangat mendukung input audio dan video multimodal dengan performa cepat." },
+                    { speaker: "Marketing Lead", text: "Fitur ini akan sangat menarik bagi pengguna yang ingin merangkum rekaman webinar dan rapat." }
+                ]
+            },
+            psht: {
+                title: "Rapat Kerja & Persiapan Tes Kenaikan Tingkat PSHT Ranting Jagakarsa",
+                participants: "Mas Bambang (Ketua Ranting), Mas Supri (Kepala Pelatih/Komtek), Mbak Rina (Bendahara), Mas Danang (Humas/Sie Acara)",
+                transcript: [
+                    { speaker: "Mas Bambang (Ketua Ranting)", text: "Assalamu'alaikum Wr. Wb. Salam Persaudaraan. Rapat malam ini membahas agenda Tes Kenaikan Tingkat (TKT) siswa Polos ke Jambon dan Hijau ke Putih di Jagakarsa." },
+                    { speaker: "Mas Supri (Kepala Pelatih)", text: "Dari sisi ke-SH-an dan materi fisik/jurus, seluruh siswa Ranting Jagakarsa sudah siap 90%. Gladi bersih akan dilaksanakan Sabtu sore." },
+                    { speaker: "Mbak Rina (Bendahara)", text: "Iuran kegiatan siswa dan anggaran perlengkapan konsumsi tim penguji sudah terkumpul sebesar 85%." },
+                    { speaker: "Mas Danang (Humas)", text: "Surat perizinan tempat ke Polsek Jagakarsa dan Camat setempat sudah diproses dan diizinkan." },
+                    { speaker: "Mas Bambang (Ketua Ranting)", text: "Terima kasih dulur-dulur. Ingat selalu pesan ajaran Budi Luhur PSHT, jaga ketertiban, dan sukseskan tes." }
+                ]
+            }
+        };
+
+        window.onload = async function() {
+            // Compute SHA-256 for default Password "Notula22" dynamically
+            const defaultHash = await sha256("Notula22");
+            const savedHash = localStorage.getItem('notula_master_pin_hash');
+            masterPasswordHash = savedHash || defaultHash;
+
+            logSecurityEvent("SYSTEM_INIT", "Aplikasi NotulaAI dimuat. Autentikasi keamanan aktif.");
+            setupIdleAutoLock();
+
+            // Speech Recognition initialization
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+
+                recognition.onstart = function() {
+                    isRecognitionRunning = true;
+                };
+
+                recognition.onresult = function(event) {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+
+                    if (finalTranscript.trim() !== '') {
+                        const activeSpeaker = document.getElementById('activeSpeakerInput').value.trim() || 'Pembicara';
+                        addTranscriptEntry(activeSpeaker, finalTranscript.trim());
+                    }
+
+                    const interimContainer = document.getElementById('interimTextContainer');
+                    const interimTextEl = document.getElementById('interimText');
+                    if (interimTranscript.trim() !== '') {
+                        interimContainer.classList.remove('hidden');
+                        interimTextEl.innerText = interimTranscript;
+                    } else {
+                        interimContainer.classList.add('hidden');
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.warn("Speech recognition error:", event.error);
+                    if (event.error === 'not-allowed') {
+                        showToast("Akses mikrofon ditolak. Izinkan izin mikrofon di browser.", "error");
+                        stopListeningUI();
+                    }
+                };
+
+                recognition.onend = function() {
+                    isRecognitionRunning = false;
+                    if (isListening) {
+                        try {
+                            if (!isRecognitionRunning) {
+                                recognition.start();
+                            }
+                        } catch(e) {
+                            console.warn("Speech recognition auto-restart skipped:", e);
+                        }
+                    }
+                };
+            } else {
+                showToast("Browser tidak mendukung Web Speech API. Gunakan preset atau input manual.", "warning");
+            }
+
+            // Load saved Webhook URL
+            const savedWebhook = localStorage.getItem('notula_sheets_webhook');
+            if (savedWebhook) {
+                document.getElementById('sheetsWebhookUrl').value = savedWebhook;
+                updateSheetsStatus(true);
+            }
+        };
+
+        async function sha256(message) {
+            const msgUint8 = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function redactSensitiveInfo(text) {
+            if (typeof text !== 'string') return text;
+            const piiEnabled = document.getElementById('piiRedactToggle')?.checked ?? true;
+            if (!piiEnabled) return text;
+
+            let sanitized = text;
+            sanitized = sanitized.replace(/\b\d{16}\b/g, '[NIK_REDACTED]');
+            sanitized = sanitized.replace(/\b(?:\d[ -]*?){13,16}\b/g, '[CREDIT_CARD_REDACTED]');
+            sanitized = sanitized.replace(/(?:\+62|0)8[1-9][0-9]{7,10}\b/g, '[PHONE_REDACTED]');
+            sanitized = sanitized.replace(/(?:password|pwd|api_key|secret)\s*[:=]\s*\S+/gi, '[SECRET_REDACTED]');
+
+            return sanitized;
+        }
+
+        async function handleMasterLogin(e) {
+            e.preventDefault();
+            const now = Date.now();
+            if (now < lockoutUntilTimestamp) {
+                const remaining = Math.ceil((lockoutUntilTimestamp - now) / 1000);
+                showToast(`Aplikasi terkunci! Harap tunggu ${remaining} detik lagi.`, "error");
+                return;
+            }
+
+            const inputEl = document.getElementById('loginPinInput');
+            const pinVal = inputEl.value.trim();
+            if (!pinVal) return;
+
+            const inputHash = await sha256(pinVal);
+            const savedHash = localStorage.getItem('notula_master_pin_hash');
+            const defaultHash = await sha256("Notula22");
+
+            if (pinVal === "Notula22" || inputHash === masterPasswordHash || inputHash === savedHash || inputHash === defaultHash) {
+                isAppUnlocked = true;
+                failedLoginCount = 0;
+                document.getElementById('loginModalOverlay').classList.add('hidden');
+                inputEl.value = '';
+                logSecurityEvent("LOGIN_SUCCESS", "Akses Master NotulaAI berhasil dibuka.");
+                showToast("Selamat Datang! Akses Master NotulaAI Terverifikasi.", "success");
+            } else {
+                failedLoginCount++;
+                logSecurityEvent("LOGIN_FAILED", `Percobaan login gagal (Ke-${failedLoginCount}).`);
+                
+                if (failedLoginCount >= 3) {
+                    lockoutUntilTimestamp = Date.now() + 60000;
+                    document.getElementById('loginLockoutNotice').classList.remove('hidden');
+                    document.getElementById('btnLoginSubmit').disabled = true;
+                    showToast("Terlalu banyak percobaan salah! Aplikasi dikunci 60 detik.", "error");
+                    
+                    setTimeout(() => {
+                        lockoutUntilTimestamp = 0;
+                        failedLoginCount = 0;
+                        document.getElementById('loginLockoutNotice').classList.add('hidden');
+                        document.getElementById('btnLoginSubmit').disabled = false;
+                    }, 60000);
+                } else {
+                    showToast(`Password Salah! (Percobaan ${failedLoginCount}/3)`, "error");
+                }
+            }
+        }
+
+        async function resetPinToDefault() {
+            localStorage.removeItem('notula_master_pin_hash');
+            masterPasswordHash = await sha256("Notula22");
+            failedLoginCount = 0;
+            lockoutUntilTimestamp = 0;
+            
+            const lockoutNotice = document.getElementById('loginLockoutNotice');
+            if (lockoutNotice) lockoutNotice.classList.add('hidden');
+            
+            const btnSubmit = document.getElementById('btnLoginSubmit');
+            if (btnSubmit) btnSubmit.disabled = false;
+            
+            const pinInput = document.getElementById('loginPinInput');
+            if (pinInput) pinInput.value = 'Notula22';
+            
+            showToast("Password berhasil di-reset ke default: Notula22. Klik Buka Akses!", "info");
+        }
+
+        function lockApp() {
+            isAppUnlocked = false;
+            document.getElementById('loginModalOverlay').classList.remove('hidden');
+            logSecurityEvent("APP_LOCKED", "Aplikasi NotulaAI dikunci oleh pengguna.");
+            showToast("Aplikasi NotulaAI telah dikunci.", "info");
+        }
+
+        function togglePinVisibility() {
+            const input = document.getElementById('loginPinInput');
+            const icon = document.getElementById('pinEyeIcon');
+            if (input.type === "password") {
+                input.type = "text";
+                icon.className = "fa-solid fa-eye-slash";
+            } else {
+                input.type = "password";
+                icon.className = "fa-solid fa-eye";
+            }
+        }
+
+        async function handleMasterPasswordChange(e) {
+            e.preventDefault();
+            const currentPin = document.getElementById('currentPinInput').value.trim();
+            const newPin = document.getElementById('newPinInput').value.trim();
+
+            if (!currentPin || !newPin) {
+                showToast("Isi Password lama dan Password baru.", "warning");
+                return;
+            }
+
+            const isAlphanumeric6to8 = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{6,8}$/.test(newPin);
+
+            if (!isAlphanumeric6to8) {
+                showToast("Password baru wajib 6-8 karakter dan kombinasi huruf & angka!", "warning");
+                return;
+            }
+
+            const currentHash = await sha256(currentPin);
+            if (currentHash !== masterPasswordHash && currentPin !== "Notula22") {
+                showToast("Password lama yang Anda masukkan salah!", "error");
+                return;
+            }
+
+            const newHash = await sha256(newPin);
+            masterPasswordHash = newHash;
+            localStorage.setItem('notula_master_pin_hash', newHash);
+
+            document.getElementById('currentPinInput').value = '';
+            document.getElementById('newPinInput').value = '';
+
+            logSecurityEvent("PASSWORD_CHANGED", "Password Master berhasil diperbarui.");
+            showToast("Password Akses Master berhasil diperbarui!", "success");
+        }
+
+        function setupIdleAutoLock() {
+            const resetTimer = () => {
+                if (!isAppUnlocked) return;
+                clearTimeout(idleTimer);
+                const autoLockEnabled = document.getElementById('autoLockToggle')?.checked ?? true;
+                if (autoLockEnabled) {
+                    idleTimer = setTimeout(() => {
+                        if (isAppUnlocked) {
+                            lockApp();
+                            showToast("Aplikasi dikunci otomatis karena tidak ada aktivitas.", "warning");
+                        }
+                    }, 300000);
+                }
+            };
+
+            document.onmousemove = resetTimer;
+            document.onkeypress = resetTimer;
+            document.onclick = resetTimer;
+        }
+
+        function logSecurityEvent(type, description) {
+            const timestamp = new Date().toLocaleTimeString('id-ID');
+            const entry = `[${timestamp}] [${type}] ${description}`;
+            securityLogs.unshift(entry);
+            
+            const logBox = document.getElementById('securityAuditLogBox');
+            if (logBox) {
+                logBox.innerHTML = securityLogs.map(l => `<div class="text-slate-300 border-b border-slate-900 pb-1">${escapeHTML(l)}</div>`).join('');
+            }
+        }
+
+        function clearSecurityLogs() {
+            securityLogs = [];
+            logSecurityEvent("LOG_CLEARED", "Log audit keamanan dibersihkan.");
+        }
+
+        function toggleListening() {
+            if (!recognition) {
+                showToast("Speech Recognition tidak didukung di browser ini. Gunakan manual entry atau preset.", "error");
+                return;
+            }
+
+            if (!isListening) {
+                startListeningUI();
+                const lang = document.getElementById('languageSelect').value;
+                recognition.lang = lang;
+                if (!isRecognitionRunning) {
+                    try {
+                        recognition.start();
+                        showToast("AI Listening Aktif: Silakan berbicara di mikrofon.", "success");
+                    } catch(e) {
+                        console.warn("Speech recognition start issue:", e);
+                    }
+                }
+            } else {
+                stopListeningUI();
+                if (isRecognitionRunning) {
+                    try { recognition.stop(); } catch(e){}
+                }
+                showToast("Sesi mendengarkan dihentikan.", "info");
+            }
+        }
+
+        function startListeningUI() {
+            isListening = true;
+            document.getElementById('statusPill').classList.remove('hidden');
+            document.getElementById('statusPill').classList.add('flex');
+            document.getElementById('micBtnText').innerText = "Hentikan Dengar";
+            document.getElementById('micBtnIcon').className = "fa-solid fa-microphone-slash text-red-400";
+            document.getElementById('btnStartMic').className = "py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-xs shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition transform active:scale-95";
+            document.getElementById('visText').innerText = "AI Mendengarkan Rapat...";
+            
+            animateVisualizer(true);
+        }
+
+        function stopListeningUI() {
+            isListening = false;
+            document.getElementById('statusPill').classList.add('hidden');
+            document.getElementById('statusPill').classList.remove('flex');
+            document.getElementById('micBtnText').innerText = "Mulai Rapat (Dengar)";
+            document.getElementById('micBtnIcon').className = "fa-solid fa-microphone";
+            document.getElementById('btnStartMic').className = "py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2 transition transform active:scale-95";
+            document.getElementById('visText').innerText = "Mikrofon Dihentikan";
+            document.getElementById('interimTextContainer').classList.add('hidden');
+            animateVisualizer(false);
+        }
+
+        function animateVisualizer(active) {
+            const bars = document.querySelectorAll('.v-bar');
+            if (visInterval) {
+                clearInterval(visInterval);
+                visInterval = null;
+            }
+            if (active) {
+                visInterval = setInterval(() => {
+                    bars.forEach(bar => {
+                        const h = Math.floor(Math.random() * 24) + 4;
+                        bar.style.height = `${h}px`;
+                    });
+                }, 150);
+            } else {
+                bars.forEach(bar => bar.style.height = '12px');
+            }
+        }
+
+        function addTranscriptEntry(speaker, text) {
+            const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const safeSpeaker = escapeHTML(speaker || 'Peserta Rapat');
+            const safeText = escapeHTML(redactSensitiveInfo(text));
+
+            const entry = {
+                id: Date.now() + Math.random(),
+                speaker: safeSpeaker,
+                text: safeText,
+                time: time
+            };
+
+            transcriptEntries.push(entry);
+            renderTranscript();
+        }
+
+        function handleManualTranscriptSubmit(e) {
+            e.preventDefault();
+            const speakerInput = document.getElementById('manualSpeakerInput');
+            const textInput = document.getElementById('manualTextInput');
+            const speaker = speakerInput.value.trim() || 'Anda';
+            const text = textInput.value.trim();
+
+            if (!text) return;
+
+            addTranscriptEntry(speaker, text);
+            textInput.value = '';
+            showToast("Pembicaraan ditambahkan ke transkrip.", "info");
+        }
+
+        function deleteTranscriptEntry(id) {
+            transcriptEntries = transcriptEntries.filter(item => item.id !== id);
+            renderTranscript();
+        }
+
+        function renderTranscript() {
+            const box = document.getElementById('transcriptBox');
+            const textarea = document.getElementById('rawTranscriptTextarea');
+
+            if (transcriptEntries.length === 0) {
+                box.innerHTML = `
+                    <div id="emptyTranscriptNotice" class="text-center py-10 text-slate-500">
+                        <i class="fa-solid fa-comments text-4xl mb-3 opacity-40"></i>
+                        <p class="text-xs">Klik <b>"Mulai Rapat"</b> lalu bicaralah di mikrofon,<br>atau muat audio/video/preset rapat di atas.</p>
+                    </div>`;
+                textarea.value = '';
+                return;
+            }
+
+            let html = '';
+            let rawText = '';
+
+            transcriptEntries.forEach((item) => {
+                html += `
+                    <div class="bg-slate-900/80 border border-slate-800/80 rounded-xl p-3 flex flex-col space-y-1 transition hover:border-slate-700 group relative">
+                        <div class="flex items-center justify-between text-[11px] text-slate-400">
+                            <span class="font-semibold text-brand-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-user-circle text-brand-400"></i> ${item.speaker}
+                            </span>
+                            <div class="flex items-center space-x-2">
+                                <span>${item.time}</span>
+                                <button onclick="deleteTranscriptEntry(${item.id})" class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-200 leading-relaxed">${item.text}</p>
+                    </div>
+                `;
+                rawText += `[${item.time}] ${item.speaker}: ${item.text}\n`;
+            });
+
+            box.innerHTML = html;
+            box.scrollTop = box.scrollHeight;
+            textarea.value = rawText;
+        }
+
+        function clearTranscript() {
+            transcriptEntries = [];
+            renderTranscript();
+            document.getElementById('analysisOutput').innerHTML = `
+                <div class="text-center py-20 text-slate-500 space-y-3">
+                    <i class="fa-solid fa-sparkles text-5xl text-brand-500/30"></i>
+                    <h4 class="text-slate-300 font-semibold text-sm">Transkrip Telah Dibersihkan</h4>
+                    <p class="text-xs max-w-md mx-auto">Silakan mulai pembicaraan baru atau muat skenario preset.</p>
+                </div>
+            `;
+            document.getElementById('analysisFooter').classList.add('hidden');
+            showToast("Transkrip berhasil dibersihkan.", "info");
+        }
+
+        function loadPreset(key) {
+            const preset = PRESETS[key];
+            if (!preset) return;
+
+            document.getElementById('meetingTitleInput').value = preset.title;
+            document.getElementById('meetingParticipantsInput').value = preset.participants;
+
+            transcriptEntries = preset.transcript.map((item, idx) => ({
+                id: Date.now() + idx,
+                speaker: item.speaker,
+                text: item.text,
+                time: new Date(Date.now() - (preset.transcript.length - idx) * 60000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+            }));
+
+            renderTranscript();
+            showToast(`Contoh Rapat "${preset.title}" berhasil dimuat!`, "success");
+            
+            finishMeetingAndAnalyze();
+        }
+
+        function syncRawToStream() {
+            const text = document.getElementById('rawTranscriptTextarea').value;
+            const lines = text.split('\n').filter(l => l.trim() !== '');
+            
+            transcriptEntries = lines.map((line, idx) => {
+                let speaker = "Peserta";
+                let content = line;
+                
+                if (line.includes(':')) {
+                    const parts = line.split(':');
+                    speaker = parts[0].replace(/\[.*?\]/g, '').trim();
+                    content = parts.slice(1).join(':').trim();
+                }
+
+                return {
+                    id: Date.now() + idx,
+                    speaker: speaker || "Peserta",
+                    text: content,
+                    time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                };
+            });
+
+            renderTranscript();
+            showToast("Perubahan transkrip disimpan.", "success");
+        }
+
+        async function finishMeetingAndAnalyze() {
+            if (isListening) {
+                stopListeningUI();
+                if (isRecognitionRunning) {
+                    try { recognition.stop(); } catch(e){}
+                }
+            }
+
+            if (transcriptEntries.length === 0) {
+                showToast("Transkrip rapat masih kosong. Bicaralah dulu atau muat preset rapat.", "warning");
+                return;
+            }
+
+            switchTab('analysis');
+            await runDeepAnalysis();
+        }
+
+        async function runDeepAnalysis() {
+            const title = document.getElementById('meetingTitleInput').value || "Rapat AI";
+            const participants = document.getElementById('meetingParticipantsInput').value || "Tim Rapat";
+            
+            const rawTranscript = transcriptEntries.map(e => `${e.speaker}: ${e.text}`).join('\n');
+
+            document.getElementById('analysisOutput').classList.add('hidden');
+            document.getElementById('analysisLoader').classList.remove('hidden');
+            document.getElementById('analysisFooter').classList.add('hidden');
+
+            const systemPrompt = `Anda adalah seorang Notulis Rapat Eksekutif Senior & Analis Bisnis AI tingkat tinggi.
+Tugas Anda adalah menganalisis transkrip rapat dan menghasilkan Notulen Formal & Pembahasan Mendalam.
+Format keluaran HARUS dalam JSON VALID persis sesuai skema berikut tanpa teks markdown pembungkus di luar JSON.
+
+Format JSON Schema:
+{
+  "executive_summary": "Ringkasan eksekutif 2-3 paragraf mendalam mengenai tujuan utama rapat, dinamika diskusi, dan kesimpulan akhir.",
+  "key_decisions": [
+    "Keputusan penting 1 yang disepakati",
+    "Keputusan penting 2"
+  ],
+  "action_items": [
+    {
+      "task": "Deskripsi tugas spesifik",
+      "assignee": "Nama orang / Tim penanggung jawab",
+      "deadline": "Estimasi tenggat waktu / Prioritas (Tinggi/Sedang/Rendah)"
+    }
+  ],
+  "deep_discussion_topics": [
+    {
+      "topic": "Nama Topik Pembahasan Utama",
+      "details": "Penjelasan rinci mengenai apa yang diperdebatkan, masukan antar pihak, dan argumen penting."
+    }
+  ],
+  "risk_analysis": [
+    "Risiko atau potensi hambatan yang teridentifikasi dalam rapat beserta solusinya jika ada"
+  ],
+  "sentiment": "Positif / Konstruktif / Cenderung Tegang / Produktif",
+  "next_meeting_recommendation": "Rekomendasi tindak lanjut atau agenda rapat berikutnya"
+}`;
+
+            const userPrompt = `Judul Rapat: ${title}
+Peserta: ${participants}
+Transkrip Pembicaraan Rapat:
+${rawTranscript}`;
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [
+                        { role: 'user', parts: [{ text: userPrompt }] }
+                    ],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                    generationConfig: {
+                        responseMimeType: "application/json"
+                    }
+                };
+
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const rawJsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!rawJsonText) throw new Error("Gagal menerima respon dari Gemini AI.");
+
+                const cleanJson = rawJsonText
+                    .replace(/^```json\s*/i, '')
+                    .replace(/^```\s*/, '')
+                    .replace(/\s*```$/, '')
+                    .trim();
+
+                const data = JSON.parse(cleanJson);
+                currentAnalysisData = data;
+
+                renderDeepAnalysisResult(data);
+                showToast("Analisis mendalam AI selesai disusun!", "success");
+
+            } catch (err) {
+                console.error("Analysis Error:", err);
+                document.getElementById('analysisOutput').innerHTML = `
+                    <div class="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-xs">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Gagal menghasilkan analisis AI: ${err.message}. Silakan coba lagi.
+                    </div>
+                `;
+                document.getElementById('analysisOutput').classList.remove('hidden');
+            } finally {
+                document.getElementById('analysisLoader').classList.add('hidden');
+            }
+        }
+
+        async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url, options);
+                    if (res.ok) return res;
+                } catch (e) {
+                    if (i === retries - 1) throw e;
+                }
+                await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+            }
+            return fetch(url, options);
+        }
+
+        function renderDeepAnalysisResult(data) {
+            const out = document.getElementById('analysisOutput');
+            out.classList.remove('hidden');
+            document.getElementById('analysisFooter').classList.remove('hidden');
+
+            let actionRows = (data.action_items || []).map(item => `
+                <tr class="border-b border-slate-800/60 hover:bg-slate-900/40">
+                    <td class="py-2.5 px-3 font-medium text-slate-200">${item.task}</td>
+                    <td class="py-2.5 px-3 text-brand-300 font-semibold"><i class="fa-regular fa-user text-[10px] mr-1"></i>${item.assignee}</td>
+                    <td class="py-2.5 px-3 text-amber-400"><i class="fa-regular fa-clock text-[10px] mr-1"></i>${item.deadline}</td>
+                </tr>
+            `).join('');
+
+            let decisions = (data.key_decisions || []).map(d => `
+                <li class="flex items-start gap-2 text-xs text-slate-200">
+                    <i class="fa-solid fa-circle-check text-emerald-400 mt-0.5 shrink-0"></i>
+                    <span>${d}</span>
+                </li>
+            `).join('');
+
+            let topics = (data.deep_discussion_topics || []).map(t => `
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 space-y-1">
+                    <h5 class="font-bold text-slate-100 text-xs flex items-center gap-2">
+                        <i class="fa-solid fa-comments text-indigo-400"></i> ${t.topic}
+                    </h5>
+                    <p class="text-xs text-slate-300 leading-relaxed">${t.details}</p>
+                </div>
+            `).join('');
+
+            let risks = (data.risk_analysis || []).map(r => `
+                <li class="flex items-start gap-2 text-xs text-slate-300">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0"></i>
+                    <span>${r}</span>
+                </li>
+            `).join('');
+
+            out.innerHTML = `
+                <!-- Executive Summary Box -->
+                <div class="bg-gradient-to-br from-brand-900/30 to-slate-900 border border-brand-500/20 rounded-xl p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-brand-300 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-contract"></i> Ringkasan Eksekutif
+                        </h4>
+                        <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-medium">
+                            Sentimen: <strong class="text-emerald-400">${data.sentiment || 'Produktif'}</strong>
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-200 leading-relaxed">${data.executive_summary}</p>
+                </div>
+
+                <!-- 2 Column Layout: Decisions & Action Items -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Key Decisions -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h4 class="font-bold text-slate-200 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-2">
+                            <i class="fa-solid fa-gavel text-emerald-400"></i> Keputusan Utama Rapat
+                        </h4>
+                        <ul class="space-y-2.5">
+                            ${decisions}
+                        </ul>
+                    </div>
+
+                    <!-- Risk & Mitigation -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <h4 class="font-bold text-slate-200 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-2">
+                            <i class="fa-solid fa-shield-alert text-amber-400"></i> Potensi Risiko & Kendala
+                        </h4>
+                        <ul class="space-y-2.5">
+                            ${risks}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Action Items Table -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
+                    <h4 class="font-bold text-slate-200 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-2">
+                        <i class="fa-solid fa-list-check text-brand-400"></i> Action Items & Penanggung Jawab
+                    </h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-[10px] text-slate-400 uppercase bg-slate-950/50">
+                                <tr>
+                                    <th class="py-2 px-3">Tugas / Action Item</th>
+                                    <th class="py-2 px-3">Penanggung Jawab</th>
+                                    <th class="py-2 px-3">Deadline / Prioritas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${actionRows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Deep Topic Breakdown -->
+                <div class="space-y-3">
+                    <h4 class="font-bold text-slate-200 text-xs uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-indigo-400"></i> Rincian Pembahasan Mendalam Per Topik
+                    </h4>
+                    <div class="space-y-3">
+                        ${topics}
+                    </div>
+                </div>
+            `;
+        }
+
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        function loadYouTubeSample(url) {
+            document.getElementById('youtubeUrlInput').value = url;
+            analyzeYouTubeVideo();
+        }
+
+        function handleLocalMediaSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            selectedLocalMediaFile = file;
+            const fileNameEl = document.getElementById('localMediaFileName');
+            const fileInfoEl = document.getElementById('localMediaFileInfo');
+            const mediaIconEl = document.getElementById('localMediaIcon');
+            const btn = document.getElementById('btnAnalyzeLocalMedia');
+            const playerContainer = document.getElementById('localMediaPlayerContainer');
+            const videoPlayer = document.getElementById('localVideoPlayer');
+            const audioPlayer = document.getElementById('localAudioPlayer');
+
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac|wma)$/i.test(file.name);
+
+            fileNameEl.innerText = file.name;
+            fileInfoEl.innerText = `Ukuran: ${sizeMB} MB • Tipe: ${isAudio ? 'Rekaman Suara' : 'Video Galeri'}`;
+            btn.disabled = false;
+
+            if (isAudio) {
+                mediaIconEl.className = "fa-solid fa-file-audio text-xl text-purple-400";
+            } else {
+                mediaIconEl.className = "fa-solid fa-file-video text-xl text-purple-400";
+            }
+
+            const fileUrl = URL.createObjectURL(file);
+            playerContainer.classList.remove('hidden');
+
+            if (isAudio) {
+                videoPlayer.classList.add('hidden');
+                audioPlayer.classList.remove('hidden');
+                audioPlayer.src = fileUrl;
+            } else {
+                audioPlayer.classList.add('hidden');
+                videoPlayer.classList.remove('hidden');
+                videoPlayer.src = fileUrl;
+            }
+
+            showToast(`File ${isAudio ? 'rekaman suara' : 'video'} "${file.name}" dipilih!`, "info");
+        }
+
+        async function analyzeLocalMedia() {
+            if (!selectedLocalMediaFile) {
+                showToast("Pilih file rekaman suara atau video terlebih dahulu.", "warning");
+                return;
+            }
+
+            const btn = document.getElementById('btnAnalyzeLocalMedia');
+            const file = selectedLocalMediaFile;
+            const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac|wma)$/i.test(file.name);
+            
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Membaca Data File...</span>`;
+            showToast(`Membaca file ${isAudio ? 'rekaman suara' : 'video'}...`, "info");
+
+            const labelPrefix = isAudio ? "[Rekaman Suara]" : "[Galeri Video]";
+            document.getElementById('meetingTitleInput').value = `${labelPrefix} ${file.name}`;
+            document.getElementById('meetingParticipantsInput').value = `${isAudio ? 'Rekaman Suara Rapat' : 'Video Galeri'} (${file.name})`;
+
+            switchTab('analysis');
+            document.getElementById('analysisOutput').classList.add('hidden');
+            document.getElementById('analysisLoader').classList.remove('hidden');
+
+            try {
+                const base64Data = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const res = reader.result;
+                        const commaIdx = res.indexOf(',');
+                        resolve(res.substring(commaIdx + 1));
+                    };
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(file);
+                });
+
+                btn.innerHTML = `<i class="fa-solid fa-brain animate-pulse"></i> <span>Gemini Memproses Media...</span>`;
+                showToast(`Mengirim sampel ${isAudio ? 'suara' : 'video'} ke Gemini Multimodal AI...`, "info");
+
+                const systemPrompt = `Anda adalah Notulis & Analis Eksekutif AI Multimodal Senior.
+Tugas Anda adalah menganalisis seluruh konten media (${isAudio ? 'rekaman suara/audio pembicaraan rapat' : 'suara, visual, dan pembicaraan video'}), merangkum seluruh isinya, mengekstrak pembahasan mendalam, dan membuat Notulen Lengkap.
+Format keluaran HARUS dalam JSON VALID persis sesuai skema berikut tanpa markdown pembungkus lain di luar JSON.
+
+JSON Schema:
+{
+  "executive_summary": "Rangkuman eksekutif 2-3 paragraf mendalam mengenai topik utama, argumen, penjelasan detail, dan kesimpulan dari isi ${isAudio ? 'rekaman suara' : 'video'} ini.",
+  "key_decisions": [
+    "Poin penting / Kesimpulan utama 1",
+    "Poin penting 2"
+  ],
+  "action_items": [
+    {
+      "task": "Rekomendasi tindakan / Pelajaran utama / Tugas",
+      "assignee": "Penanggung Jawab / Tim",
+      "deadline": "Prioritas (Tinggi/Sedang)"
+    }
+  ],
+  "deep_discussion_topics": [
+    {
+      "topic": "Segmen Pembahasan Utama 1",
+      "details": "Penjelasan mendalam dan eksplorasi rinci topik tersebut."
+    }
+  ],
+  "risk_analysis": [
+    "Peringatan, tantangan, atau potensi isu yang disinggung"
+  ],
+  "sentiment": "Informatif / Kondusif / Edukatif / Kritis / Produktif",
+  "simulated_transcript": [
+    {
+      "speaker": "Pembicara 1",
+      "text": "Ringkasan poin pembicaraan segmen 1..."
+    },
+    {
+      "speaker": "Pembicara 2",
+      "text": "Ringkasan poin pembicaraan segmen 2..."
+    }
+  ]
+}`;
+
+                const userPrompt = `Nama File: ${file.name}
+Tipe Media: ${isAudio ? 'File Rekaman Suara / Audio Rapat' : 'File Video Galeri'}
+Silakan lakukan analisis multimodal penuh pada konten ini. Ekstrak transkrip pembicaraan, notulen mendalam, topik utama, keputusan, dan action items.`;
+
+                let mimeType = file.type;
+                if (!mimeType || mimeType === "") {
+                    if (file.name.endsWith('.mp3')) mimeType = "audio/mp3";
+                    else if (file.name.endsWith('.wav')) mimeType = "audio/wav";
+                    else if (file.name.endsWith('.m4a')) mimeType = "audio/m4a";
+                    else if (file.name.endsWith('.ogg')) mimeType = "audio/ogg";
+                    else if (file.name.endsWith('.aac')) mimeType = "audio/aac";
+                    else if (file.name.endsWith('.mp4')) mimeType = "video/mp4";
+                    else if (file.name.endsWith('.webm')) mimeType = "video/webm";
+                    else mimeType = isAudio ? "audio/mp3" : "video/mp4";
+                }
+
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{
+                        role: 'user',
+                        parts: [
+                            { text: userPrompt },
+                            {
+                                inlineData: {
+                                    mimeType: mimeType,
+                                    data: base64Data
+                                }
+                            }
+                        ]
+                    }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const rawJsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!rawJsonText) throw new Error("Gagal menerima hasil analisis media dari Gemini AI.");
+
+                const cleanJson = rawJsonText
+                    .replace(/^```json\s*/i, '')
+                    .replace(/^```\s*/, '')
+                    .replace(/\s*```$/, '')
+                    .trim();
+
+                const data = JSON.parse(cleanJson);
+                currentAnalysisData = data;
+
+                if (data.simulated_transcript && Array.isArray(data.simulated_transcript)) {
+                    transcriptEntries = data.simulated_transcript.map((item, idx) => ({
+                        id: Date.now() + idx,
+                        speaker: item.speaker || (isAudio ? "Pembicara Suara" : "Pembicara Video"),
+                        text: item.text,
+                        time: `Segmen ${idx + 1}`
+                    }));
+                    renderTranscript();
+                }
+
+                renderDeepAnalysisResult(data);
+                showToast(`Analisis ${isAudio ? 'Rekaman Suara' : 'Video'} Berhasil Disusun oleh AI!`, "success");
+
+            } catch (err) {
+                console.error("Local Media Analysis Error:", err);
+                showToast(`Gagal menganalisis file ${isAudio ? 'rekaman suara' : 'video'}: ` + err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>Proses Media dengan AI</span>`;
+                document.getElementById('analysisLoader').classList.add('hidden');
+            }
+        }
+
+        async function analyzeYouTubeVideo() {
+            const inputEl = document.getElementById('youtubeUrlInput');
+            const url = inputEl.value.trim();
+            const btn = document.getElementById('btnAnalyzeYoutube');
+            
+            if (!url) {
+                showToast("Masukkan URL video YouTube terlebih dahulu.", "warning");
+                return;
+            }
+
+            const videoId = extractYouTubeId(url);
+            if (!videoId) {
+                showToast("Format URL YouTube tidak valid. Contoh: https://www.youtube.com/watch?v=dQw4w9WgXcQ", "error");
+                return;
+            }
+
+            const playerContainer = document.getElementById('youtubePlayerContainer');
+            const iframe = document.getElementById('youtubeIframe');
+            iframe.src = `https://www.youtube.com/embed/${videoId}`;
+            playerContainer.classList.remove('hidden');
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Menganalisis...</span>`;
+            showToast("Mengambil info video YouTube & melakukan analisis AI mendalam...", "info");
+
+            let videoTitle = "";
+            try {
+                const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+                if (oembedRes.ok) {
+                    const oembedData = await oembedRes.json();
+                    videoTitle = oembedData.title || "";
+                }
+            } catch(e) {
+                console.warn("Could not fetch YouTube oEmbed metadata:", e);
+            }
+
+            const titleToUse = videoTitle || `Analisis Video YouTube (${videoId})`;
+            document.getElementById('meetingTitleInput').value = `[YouTube] ${titleToUse}`;
+            document.getElementById('meetingParticipantsInput').value = `Pembicara Video YouTube (${url})`;
+
+            switchTab('analysis');
+            document.getElementById('analysisOutput').classList.add('hidden');
+            document.getElementById('analysisLoader').classList.remove('hidden');
+
+            const systemPrompt = `Anda adalah Notulis & Analis Eksekutif AI Senior. 
+Tugas Anda adalah menganalisis, merangkum seluruh isi video YouTube, mengekstrak pembahasan mendalam, poin penting, dan notulen lengkap.
+Format keluaran HARUS dalam JSON VALID persis sesuai skema berikut tanpa markdown pembungkus lain di luar JSON.
+
+JSON Schema:
+{
+  "executive_summary": "Rangkuman eksekutif 2-3 paragraf mendalam mengenai topik utama, argumen, penjelasan detail, dan kesimpulan dari isi video YouTube.",
+  "key_decisions": [
+    "Poin penting / Kesimpulan utama 1 dari video",
+    "Poin penting 2"
+  ],
+  "action_items": [
+    {
+      "task": "Rekomendasi tindakan / Pelajaran utama dari video",
+      "assignee": "Penonton / Tim",
+      "deadline": "Prioritas (Tinggi/Sedang)"
+    }
+  ],
+  "deep_discussion_topics": [
+    {
+      "topic": "Segmen Pembahasan Utama 1 dalam Video",
+      "details": "Penjelasan mendalam dan eksplorasi rinci topik tersebut dalam video."
+    }
+  ],
+  "risk_analysis": [
+    "Peringatan, tantangan, atau potensi isu yang disinggung dalam video"
+  ],
+  "sentiment": "Informatif / Edukatif / Kritis / Inspiratif",
+  "simulated_transcript": [
+    {
+      "speaker": "Host / Pembicara Video",
+      "text": "Ringkasan poin pembicaraan segmen 1..."
+    },
+    {
+      "speaker": "Narasumber / Guest",
+      "text": "Ringkasan poin pembicaraan segmen 2..."
+    }
+  ]
+}`;
+
+            const userPrompt = `URL Video YouTube: ${url}
+Judul Video (jika ada): ${titleToUse}
+
+Silakan cari informasi lengkap, transkrip, analisis, dan buat rangkuman Notulen Mendalam dari seluruh isi video YouTube tersebut.`;
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] }
+                };
+
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const rawJsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!rawJsonText) throw new Error("Gagal menerima hasil analisis video dari Gemini AI.");
+
+                const cleanJson = rawJsonText
+                    .replace(/^```json\s*/i, '')
+                    .replace(/^```\s*/, '')
+                    .replace(/\s*```$/, '')
+                    .trim();
+
+                const data = JSON.parse(cleanJson);
+                currentAnalysisData = data;
+
+                if (data.simulated_transcript && Array.isArray(data.simulated_transcript)) {
+                    transcriptEntries = data.simulated_transcript.map((item, idx) => ({
+                        id: Date.now() + idx,
+                        speaker: item.speaker || "Video Host",
+                        text: item.text,
+                        time: `Segmen ${idx + 1}`
+                    }));
+                    renderTranscript();
+                }
+
+                renderDeepAnalysisResult(data);
+                showToast("Rangkuman & Analisis Video YouTube Berhasil Dibuat!", "success");
+
+            } catch (err) {
+                console.error("YouTube Analysis Error:", err);
+                showToast("Gagal menganalisis video YouTube: " + err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>Proses AI</span>`;
+                document.getElementById('analysisLoader').classList.add('hidden');
+            }
+        }
+
+        async function askAIChat(e) {
+            e.preventDefault();
+            const input = document.getElementById('chatInput');
+            const question = input.value.trim();
+            if (!question) return;
+
+            const chatBox = document.getElementById('chatMessagesBox');
+            
+            const userMsg = document.createElement('div');
+            userMsg.className = "bg-brand-600/30 border border-brand-500/30 p-3 rounded-xl max-w-[85%] ml-auto text-slate-100 font-medium";
+            userMsg.innerText = question;
+            chatBox.appendChild(userMsg);
+
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = "bg-slate-900 border border-slate-800 p-3 rounded-xl max-w-[85%] text-slate-400 italic flex items-center gap-2";
+            loadingMsg.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-brand-400"></i> AI sedang memikirkan jawaban...`;
+            chatBox.appendChild(loadingMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            const meetingContext = transcriptEntries.map(e => `${e.speaker}: ${e.text}`).join('\n');
+            const summaryContext = currentAnalysisData ? JSON.stringify(currentAnalysisData) : "Belum ada rangkuman eksekutif.";
+
+            const prompt = `Context Data Rapat:
+Transkrip Pembicaraan:
+${meetingContext}
+
+Hasil Analisis Notulen AI:
+${summaryContext}
+
+Pertanyaan Pengguna: "${question}"
+Jawablah pertanyaan pengguna dengan sopan, akurat, profesional, dan ringkas berdasarkan data rapat di atas.`;
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+                });
+
+                const resData = await response.json();
+                const aiResponseText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, saya tidak dapat menemukan jawaban dalam data rapat.";
+
+                loadingMsg.className = "bg-slate-900 border border-slate-800 p-3 rounded-xl max-w-[85%] text-slate-200 leading-relaxed";
+                loadingMsg.innerHTML = escapeHTML(aiResponseText).replace(/\n/g, '<br>');
+
+            } catch(err) {
+                loadingMsg.className = "bg-red-500/10 border border-red-500/30 p-3 rounded-xl max-w-[85%] text-red-300";
+                loadingMsg.innerText = "Gagal menghubungi AI Assistant: " + err.message;
+            } finally {
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
+        function saveWebhookUrl() {
+            const url = document.getElementById('sheetsWebhookUrl').value.trim();
+            if (url) {
+                localStorage.setItem('notula_sheets_webhook', url);
+                updateSheetsStatus(true);
+                showToast("Webhook Google Sheets berhasil disimpan!", "success");
+            } else {
+                localStorage.removeItem('notula_sheets_webhook');
+                updateSheetsStatus(false);
+                showToast("Webhook dihapus. Data disimpan di mode lokal.", "info");
+            }
+        }
+
+        function updateSheetsStatus(active) {
+            const lbl = document.getElementById('sheetsStatusLabel');
+            if (active) {
+                lbl.innerText = "Google Sheets: Webhook Aktif";
+                lbl.parentElement.className = "hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-sheets-500/20 border border-sheets-500/40 text-emerald-300 text-xs font-medium transition";
+            } else {
+                lbl.innerText = "Google Sheets: Siap Sync";
+                lbl.parentElement.className = "hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-sheets-500/10 border border-sheets-500/30 text-emerald-400 hover:bg-sheets-500/20 text-xs font-medium transition";
+            }
+        }
+
+        async function syncToGoogleSheets() {
+            if (!currentAnalysisData) {
+                showToast("Belum ada hasil analisis rapat untuk disimpan.", "warning");
+                return;
+            }
+
+            const title = document.getElementById('meetingTitleInput').value || "Rapat AI";
+            const participants = document.getElementById('meetingParticipantsInput').value || "-";
+            const webhookUrl = localStorage.getItem('notula_sheets_webhook');
+
+            const actionItemsStr = (currentAnalysisData.action_items || []).map(a => `${a.task} (${a.assignee})`).join('; ');
+            const decisionsStr = (currentAnalysisData.key_decisions || []).join('; ');
+            const risksStr = (currentAnalysisData.risk_analysis || []).join('; ');
+
+            const rowData = {
+                timestamp: new Date().toLocaleString('id-ID'),
+                title: title,
+                participants: participants,
+                summary: currentAnalysisData.executive_summary,
+                action_items: actionItemsStr,
+                decisions: decisionsStr,
+                risks: risksStr,
+                synced: false
+            };
+
+            if (webhookUrl) {
+                showToast("Mengirim data ke Google Sheets Webhook...", "info");
+                try {
+                    await fetch(webhookUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(rowData)
+                    });
+                    rowData.synced = true;
+                    showToast("Data dikirim ke Google Sheets Spreadsheet!", "success");
+                } catch (e) {
+                    console.error("Webhook Error:", e);
+                    showToast("Gagal sync via Webhook, data disimpan ke lokal.", "warning");
+                }
+            } else {
+                showToast("Data berhasil ditambahkan ke Pratinjau Google Sheets Hub!", "success");
+            }
+
+            storedSheetsRows.unshift(rowData);
+            renderSheetsPreview();
+            switchTab('sheets');
+        }
+
+        function renderSheetsPreview() {
+            const tbody = document.getElementById('sheetsPreviewBody');
+            if (storedSheetsRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">Belum ada baris data rapat yang tersimpan. Klik "Simpan ke Google Sheets".</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = storedSheetsRows.map(row => `
+                <tr class="hover:bg-slate-900/60 transition">
+                    <td class="px-4 py-3 font-mono text-[11px] text-slate-400">${row.timestamp}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-200">${row.title}</td>
+                    <td class="px-4 py-3 text-slate-300 max-w-xs truncate">${row.summary}</td>
+                    <td class="px-4 py-3 text-slate-300 max-w-xs truncate">${row.action_items}</td>
+                    <td class="px-4 py-3">
+                        ${row.synced ? 
+                            `<span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px]"><i class="fa-solid fa-cloud-check"></i> Webhook Synced</span>` : 
+                            `<span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px]"><i class="fa-solid fa-hard-drive"></i> Tersimpan Lokal</span>`}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function exportToCSV() {
+            if (storedSheetsRows.length === 0) {
+                showToast("Tidak ada data rapat untuk diekspor.", "warning");
+                return;
+            }
+
+            let csv = "Tanggal & Waktu,Judul Rapat,Peserta,Rangkuman,Action Items,Keputusan Utama\n";
+            storedSheetsRows.forEach(r => {
+                const cleanStr = (s) => `"${(s || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+                csv += `${cleanStr(r.timestamp)},${cleanStr(r.title)},${cleanStr(r.participants)},${cleanStr(r.summary)},${cleanStr(r.action_items)},${cleanStr(r.decisions)}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `NotulaAI_Sheets_Export_${Date.now()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("File CSV Spreadsheet berhasil diunduh!", "success");
+        }
+
+        function exportToPDF() {
+            if (!currentAnalysisData) {
+                showToast("Belum ada hasil analisis rapat untuk diunduh.", "warning");
+                return;
+            }
+
+            const title = document.getElementById('meetingTitleInput').value || "Notulensi_Rapat";
+            const element = document.getElementById('analysisOutput');
+
+            showToast("Memproses pembuatan dokumen PDF...", "info");
+
+            const opt = {
+                margin:       [0.4, 0.4, 0.4, 0.4],
+                filename:     `NotulaAI_Notulen_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false, backgroundColor: '#0f172a' },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                showToast("File PDF notulen berhasil diunduh!", "success");
+            }).catch(err => {
+                console.error("PDF Export Error:", err);
+                showToast("Gagal membuat PDF: " + err.message, "error");
+            });
+        }
+
+        function exportToWord() {
+            if (!currentAnalysisData) {
+                showToast("Belum ada hasil analisis rapat untuk diunduh.", "warning");
+                return;
+            }
+
+            const title = document.getElementById('meetingTitleInput').value || "Notulensi_Rapat";
+            const participants = document.getElementById('meetingParticipantsInput').value || "-";
+            const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            const content = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>${title}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #1e293b; }
+                        h1 { font-size: 18pt; color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 6px; }
+                        h2 { font-size: 14pt; color: #0f172a; margin-top: 18px; }
+                        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+                        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; font-size: 10pt; }
+                        th { background-color: #f1f5f9; font-weight: bold; }
+                        .meta { background-color: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 15px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Notulen Rapat Eksekutif - NotulaAI</h1>
+                    <div class="meta">
+                        <p><strong>Judul Rapat:</strong> ${title}</p>
+                        <p><strong>Tanggal:</strong> ${dateStr}</p>
+                        <p><strong>Peserta:</strong> ${participants}</p>
+                        <p><strong>Sentimen Rapat:</strong> ${currentAnalysisData.sentiment || 'Produktif'}</p>
+                    </div>
+
+                    <h2>Ringkasan Eksekutif</h2>
+                    <p>${currentAnalysisData.executive_summary}</p>
+
+                    <h2>Keputusan Utama</h2>
+                    <ul>
+                        ${(currentAnalysisData.key_decisions || []).map(d => `<li>${d}</li>`).join('')}
+                    </ul>
+
+                    <h2>Action Items & Penanggung Jawab</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tugas</th>
+                                <th>Penanggung Jawab</th>
+                                <th>Deadline / Prioritas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${(currentAnalysisData.action_items || []).map(a => `
+                                <tr>
+                                    <td>${a.task}</td>
+                                    <td>${a.assignee}</td>
+                                    <td>${a.deadline}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+
+                    <h2>Rincian Pembahasan Topik</h2>
+                    ${(currentAnalysisData.deep_discussion_topics || []).map(t => `
+                        <h3>${t.topic}</h3>
+                        <p>${t.details}</p>
+                    `).join('')}
+
+                    <h2>Analisis Risiko & Kendala</h2>
+                    <ul>
+                        ${(currentAnalysisData.risk_analysis || []).map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff' + content], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `NotulaAI_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.doc`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("File MS Word (.doc) berhasil diunduh!", "success");
+        }
+
+        function switchTab(tabKey) {
+            const tabs = ['analysis', 'sheets', 'chat', 'raw', 'security'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tabBtn-${t}`);
+                const content = document.getElementById(`tabContent-${t}`);
+                
+                if (t === tabKey) {
+                    btn.className = "tab-btn active flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white shadow transition";
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = "tab-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition";
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+        function toggleAppsScriptModal() {
+            const modal = document.getElementById('appsScriptModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function copyAppsScriptCode() {
+            const code = document.getElementById('appsScriptCode').value;
+            copyToClipboard(code);
+            showToast("Kode Google Apps Script disalin ke clipboard!", "success");
+        }
+
+        function copyTranscriptToClipboard() {
+            const text = document.getElementById('rawTranscriptTextarea').value;
+            if (!text) return;
+            copyToClipboard(text);
+            showToast("Transkrip disalin ke clipboard!", "success");
+        }
+
+        function copyToClipboard(text) {
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass = "bg-slate-800 border-slate-700 text-slate-200";
+            let icon = "fa-info-circle text-brand-400";
+            
+            if (type === 'success') {
+                bgClass = "bg-slate-900 border-emerald-500/40 text-emerald-200";
+                icon = "fa-circle-check text-emerald-400";
+            } else if (type === 'warning') {
+                bgClass = "bg-slate-900 border-amber-500/40 text-amber-200";
+                icon = "fa-triangle-exclamation text-amber-400";
+            } else if (type === 'error') {
+                bgClass = "bg-slate-900 border-red-500/40 text-red-200";
+                icon = "fa-circle-xmark text-red-400";
+            }
+
+            toast.className = `p-3.5 rounded-xl border ${bgClass} shadow-xl text-xs flex items-center space-x-2.5 transition transform translate-y-2 opacity-0 duration-300`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-sm"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
